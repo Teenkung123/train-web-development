@@ -4,7 +4,7 @@
             background-color: eeeeee;
             vertical-align: middle;
             align-items: center;
-            margin-top: 20%;
+            margin-top: 15%;
         }
         .registerform {
             margin: auto;
@@ -50,6 +50,10 @@
                 <input name="username" id="username" type="text" class="inputbar" style="height: 30px; width:90%; margin-bottom: 10px;">
             </div>
             <div>
+                <label style="margin-left: 5%">อีเมล</label><br>
+                <input name="email" id="email" type="text" class="inputbar" style="height: 30px; width:90%; margin-bottom: 10px;">
+            </div>
+            <div>
                 <label style="margin-left: 5%;">รหัสผ่าน</label><br>
                 <input name="password" id="password" type="password" class="inputbar" style="height: 30px; width:90%; margin-bottom: 10px;">
             </div>
@@ -70,20 +74,31 @@
 
         let username = document.getElementById("username").value;
         let password = document.getElementById("password").value;
+        let email = document.getElementById("email").value;
         let confirm_password = document.getElementById("confirm-password").value;
         
-        if (username == "" || password == "") {
-            alert("Please input your username and password");
+        if (username == "" || password == "" || confirm_password == "" || email == "") {
+            alert("กรุณากรอกข้อมูลให้ครบ");
         }
 
         let xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
             if (this.readyState == 4 && this.status == 200) {
-                xhttp.open("POST", "core/main/sql/register.php", true);
-                xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-                xhttp.send("username="+username+"&password="+password);
+                if (xhttp.responseText != "") {
+                    if (xhttp.responseText == "S") {
+                        
+                        alert("สร้างบัญชีสำเร็จ");
+                        window.location.href = "index.php";
+
+                    } else {
+                        alert(xhttp.responseText);
+                    }
+                }
             }
         };
+        xhttp.open("POST", "core/main/sql/register.php", true);
+        xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        xhttp.send("username="+username+"&email="+email+"&password="+password);
 
         
     }

@@ -1,10 +1,13 @@
 <html>
+    <head>
+        <title>เข้าสู่ระบบ</title>
+    </head>
     <style>
         body {
             background-color: eeeeee;
             vertical-align: middle;
             align-items: center;
-            margin-top: 20%;
+            margin-top: 15%;
         }
         .loginform {
             margin: auto;
@@ -23,6 +26,10 @@
             border-radius: 4px;
             margin-left: 5%;
             box-sizing: border-box;
+        }
+        .inputbar button:hover {
+            background-color: 0077dd;
+            transition: 0.7s;
         }
         label {
             display: inline-block;
@@ -47,7 +54,7 @@
                 <label style="margin-left: 5%;">ยังไม่มีบัญชี? <a href="register.php">สร้างบัญชี</a><label>
             </div>
             <div style="padding-bottom: 30px; margin-top: 10px;">
-                <button onclick="sendRequest()" class="inputbar" style="color: white; background-color: 00aaff; height: 40px; width:90%;">Login</button>
+                <button onclick="sendLoginRequest()" class="inputbar" style="color: white; background-color: 00aaff; height: 40px; width:90%;">Login</button>
             </div>
         </div>
     </body>
@@ -55,25 +62,27 @@
 
 <script>
 
-    function sendRequest() {
+    function sendLoginRequest() {
 
         let username = document.getElementById("username").value;
         let password = document.getElementById("password").value;
 
         if (username == "" || password == "") {
             alert("Please input your username and password");
-        }
-
-        let xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-            if (this.readyState == 4 && this.status == 200) {
-                xhttp.open("POST", "core/main/sql/login.php", true);
-                xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-                xhttp.send("username="+username+"&password="+password);
-            }
-        };
-
-        
+        } else {
+            xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (xhttp.responseText != "") {
+                    if (this.readyState == 4 && this.status == 200) {
+                        window.location.href = "index.php";
+                    } else {
+                        alert(xhttp.responseText);
+                    }
+                }
+            };
+            xhttp.open("POST", "core/main/sql/login.php", true);
+            xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            xhttp.send("username="+username+"&password="+password);
+        }  
     }
-
 </script>

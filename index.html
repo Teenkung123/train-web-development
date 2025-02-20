@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lights Out Interactive with Modal Solver</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #f8f9fa;
+      padding-top: 20px;
+    }
+    .card {
+      margin-bottom: 20px;
+    }
+    /* Grid container with dynamic height */
+    #gridContainer {
+      border: 1px solid #ddd;
+      background: #fff;
+      padding: 10px;
+      text-align: center;
+      overflow: auto;
+      /* Height is set dynamically in JS */
+    }
+    #grid {
+      display: grid;
+      gap: 2px;
+      margin: 0 auto;
+    }
+    .cell {
+      border: 1px solid #ddd;
+      text-align: center;
+      line-height: 1;
+      font-size: 14px;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.3s;
+    }
+    .cell.on {
+      background-color: #ffc107;
+      color: #000;
+    }
+    .cell.off {
+      background-color: #343a40;
+      color: #fff;
+    }
+    .cell.clicked {
+      background-color: red !important;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Top Row: Board Setup & Move Sequence -->
+    <div class="row">
+      <!-- Board Setup -->
+      <div class="col-md-6">
+        <div class="card shadow-sm" style="height: 575px">
+          <div class="card-body">
+            <h5 class="card-title">Board Setup</h5>
+            <div class="mb-3">
+              <label for="boardSizeInput" class="form-label">Board Size (n×n):</label>
+              <input type="number" id="boardSizeInput" class="form-control" min="1" value="24">
+            </div>
+            <div class="mb-4">
+              <label for="boardInput" class="form-label">Board State</label>
+              <textarea id="boardInput" class="form-control" rows="11" placeholder="Enter board state with n lines of n characters (0 or 1)
+Top row first">000001000000000001110011
+110100010110101000010011
+011101110000001101001110
+000110111000110101101100
+101101011010010011101010
+111000100101110100101000
+110001011100000000000101
+100000010001100000000010
+000110010010110110101001
+011101101011111011100000
+011000101010111011111100
+100011110010000100100111
+000111010010100010001110
+011001010001001111110101
+110001000010111000100000
+000000101100101000101001
+111001010010010011110110
+100000110001111111011010
+110100000011100100110010
+101000110111001110010000
+110000000010011100100101
+111111011011111100010101
+000000000110101011100000
+110001111100000011001111</textarea>
+            </div>
+            <div class="d-grid gap-2">
+              <button id="loadBoard" class="btn btn-primary">Load Board</button>
+              <button id="resetBoard" class="btn btn-secondary">Reset Board</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Move Sequence Input -->
+      <div class="col-md-6">
+        <div class="card shadow-sm" style="height: 575px">
+          <div class="card-body">
+            <h5 class="card-title">Move Sequence</h5>
+            <div class="mb-3">
+              <label for="moveInput" class="form-label">Move Sequence (e.g., (3, 4), (10, 16), ...)</label>
+              <textarea id="moveInput" class="form-control" rows="15" placeholder="Enter moves as comma–separated values">(11, 18), (10, 3), (22, 5), (22, 22), (4, 13), (12, 12), (18, 17), (19, 23), (12, 19), (11, 16), (1, 17), (11, 5), (10, 13), (24, 3), (2, 2), (3, 22), (14, 11), (3, 2), (3, 7), (24, 13), (12, 24), (23, 4), (5, 8), (18, 16), (24, 4), (10, 16), (16, 1), (15, 21), (23, 11), (20, 17), (2, 15), (24, 11), (8, 12), (7, 7), (6, 11), (3, 16), (14, 17), (24, 14), (18, 3), (18, 23), (4, 19), (15, 5), (1, 4), (23, 2), (20, 4), (5, 5), (18, 24), (24, 21), (14, 23), (4, 4), (1, 8), (7, 18), (9, 3), (21, 1), (5, 7), (12, 5), (22, 20), (16, 22), (12, 9), (24, 6), (19, 5), (19, 6), (9, 1), (13, 7), (15, 6), (6, 14), (5, 4), (3, 15), (14, 14), (3, 23), (11, 23), (20, 6), (5, 11), (24, 22), (10, 20), (9, 24), (5, 23), (21, 16), (5, 20), (22, 2), (12, 17), (14, 5), (13, 2), (19, 1), (17, 19), (3, 1), (18, 5), (17, 12), (20, 1), (1, 23), (12, 11), (19, 3), (1, 21), (19, 10), (18, 21), (3, 13), (4, 22), (6, 20), (12, 14), (10, 11), (19, 9), (20, 20), (6, 13), (11, 2), (11, 4), (1, 12), (18, 15), (4, 1), (8, 4), (14, 21), (13, 19), (16, 8), (7, 1), (21, 6), (4, 8), (21, 19), (2, 22), (23, 16), (11, 3), (2, 14), (14, 15), (22, 14), (13, 3), (22, 18), (24, 12), (13, 17), (13, 16), (22, 17), (14, 13), (8, 2), (1, 3), (1, 24), (14, 10), (14, 2), (24, 1), (5, 17), (15, 2), (4, 5), (20, 19), (1, 9), (15, 24), (15, 7), (15, 11), (2, 17), (16, 2), (5, 19), (22, 7), (24, 10), (20, 13), (7, 6), (9, 12), (8, 19), (7, 13), (23, 19), (6, 1), (13, 22), (1, 7), (2, 16), (14, 1), (23, 5), (6, 3), (1, 14), (18, 13), (15, 18), (4, 15), (21, 7), (1, 22), (13, 24), (16, 21), (12, 18), (1, 13), (10, 17), (10, 9), (9, 20), (22, 16), (3, 4), (2, 10), (4, 17), (4, 21), (4, 2), (1, 20), (11, 8), (6, 6), (15, 4), (5, 1), (24, 15), (19, 24), (24, 16), (13, 23), (17, 4), (1, 19), (1, 5), (2, 5), (9, 6), (3, 17), (16, 6), (4, 12), (17, 15), (19, 15), (12, 7), (12, 22), (8, 21), (11, 9), (22, 21), (2, 6), (7, 5), (6, 21), (13, 18), (6, 8), (11, 24), (1, 15), (5, 12), (15, 23), (10, 7), (10, 8), (22, 19), (15, 3), (21, 15), (23, 22), (5, 2), (22, 12), (17, 14), (2, 18), (7, 10), (4, 11), (4, 6), (11, 20), (16, 20), (21, 20), (21, 18), (2, 13), (18, 14), (10, 18), (15, 12), (9, 22), (17, 23), (1, 1), (6, 9), (19, 21), (4, 7), (20, 24), (9, 10), (12, 3), (18, 22), (7, 24), (2, 7), (18, 4), (22, 23), (23, 12), (20, 2), (17, 17), (17, 3), (10, 4), (11, 21), (19, 7), (8, 22), (21, 10), (19, 17), (7, 19), (3, 14), (23, 3), (18, 19), (16, 23), (8, 18), (2, 20), (12, 21), (20, 14), (16, 17), (19, 14), (5, 21), (24, 23), (12, 10), (23, 24), (7, 12), (11, 13), (21, 24), (23, 6), (20, 16), (17, 13), (11, 22)
+              </textarea>
+            </div>
+            <div class="d-grid gap-2">
+              <button id="loadMoves" class="btn btn-primary">Load Moves</button>
+              <!-- Button to open solver modal -->
+              <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#solverModal">
+                Open Solver
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Step-by-Step Controls -->
+    <div class="row">
+      <div class="col-md-12">
+        <div class="card shadow-sm">
+          <div class="card-body text-center">
+            <h5 class="card-title">Step-by-Step Control</h5>
+            <div class="row">
+              <div class="col-md-3">
+                <button id="prevStep" class="w-100 btn btn-secondary">Previous Step</button>
+              </div>
+              <div class="col-md-3">
+                <button id="startStep" class="w-100 btn btn-warning">To First Step</button>
+              </div>
+              <div class="col-md-3">
+                <button id="finalStep" class="w-100 btn btn-danger">To Final Step</button>
+              </div>
+              <div class="col-md-3">
+                <button id="nextStep" class="w-100 btn btn-success">Next Step</button>
+              </div>
+            </div>
+            <p id="message" class="mt-3"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Board Visualization -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title text-center">Board Visualization</h5>
+            <div id="gridContainer">
+              <div id="grid"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Solver Modal -->
+  <div class="modal fade" id="solverModal" tabindex="-1" aria-labelledby="solverModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="solverModalLabel">Solver</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="moveLimitInput" class="form-label">Move Limit:</label>
+            <input type="number" id="moveLimitInput" class="form-control" value="430">
+          </div>
+          <div class="mb-3">
+            <label for="timeoutInput" class="form-label">Timeout (ms):</label>
+            <input type="number" id="timeoutInput" class="form-control" value="5000">
+          </div>
+          <div class="mb-3">
+            <label for="solutionOutput" class="form-label">Solution Moves:</label>
+            <textarea id="solutionOutput" class="form-control" rows="5" readonly></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="solveBoard" type="button" class="btn btn-danger">Solve Board</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap Bundle with Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Global variables
+    let boardSize = 24;
+    let initialBoard = [];  // 2D array (current board state as loaded)
+    let currentBoard = [];  // 2D array for step control
+    let moveSequence = [];  // Array of moves for step control; each move: {x, y} (1-indexed)
+    let currentStep = 0;
+    let history = [];
+
+    // -----------------------
+    // Board & Grid Functions
+    // -----------------------
+    function copyBoard(board) {
+      return board.map(row => row.slice());
+    }
+
+    function parseBoard(input) {
+      const lines = input.trim().split(/\r?\n/).filter(line => line.trim().length);
+      if (lines.length !== boardSize) {
+        alert(`Expected ${boardSize} lines but got ${lines.length}.`);
+        return null;
+      }
+      let board = [];
+      for (let i = 0; i < boardSize; i++) {
+        let line = lines[i].trim();
+        if (line.length < boardSize) {
+          alert(`Line ${i+1} should have at least ${boardSize} characters.`);
+          return null;
+        }
+        board[boardSize - 1 - i] = [];
+        for (let j = 0; j < boardSize; j++) {
+          board[boardSize - 1 - i][j] = (line[j] === '1');
+        }
+      }
+      return board;
+    }
+
+    function buildGrid() {
+      const gridDiv = document.getElementById('grid');
+      gridDiv.innerHTML = "";
+      const container = document.getElementById('gridContainer');
+      const containerWidth = container.clientWidth - 30; // subtract padding
+      const gap = 2;
+      const totalGap = gap * (boardSize - 1);
+      const cellSize = Math.floor((containerWidth - totalGap) / boardSize);
+      container.style.height = (cellSize * (boardSize+1) + totalGap) + 'px';
+      gridDiv.style.gridTemplateColumns = `repeat(${boardSize}, ${cellSize}px)`;
+      
+      for (let row = boardSize - 1; row >= 0; row--) {
+        for (let col = 0; col < boardSize; col++) {
+          const cellDiv = document.createElement('div');
+          cellDiv.classList.add('cell');
+          cellDiv.style.width = cellSize + 'px';
+          cellDiv.style.height = cellSize + 'px';
+          cellDiv.dataset.row = row;
+          cellDiv.dataset.col = col;
+          cellDiv.addEventListener('click', () => {
+            // If the cell is off (you can decide if you always want to flash red, or only for off cells):
+            if (!currentBoard[row][col]) {
+              // 1. Add the "clicked" class for a quick red flash
+              cellDiv.classList.add('clicked');
+
+              // 2. Remove it after a short delay
+              setTimeout(() => {
+                cellDiv.classList.remove('clicked');
+              }, 300);
+
+              // 3. Apply the move as before
+              applyMove(currentBoard, col, row);
+              history.push(copyBoard(currentBoard));
+              updateGrid();
+            }
+          });
+          gridDiv.appendChild(cellDiv);
+        }
+      }
+    }
+
+    function updateGrid() {
+      const gridDiv = document.getElementById('grid');
+      const cells = gridDiv.children;
+      if (cells.length !== boardSize * boardSize) {
+        buildGrid();
+      }
+      let index = 0;
+      for (let row = boardSize - 1; row >= 0; row--) {
+        for (let col = 0; col < boardSize; col++) {
+          const cellDiv = cells[index++];
+          if (currentBoard[row][col]) {
+            cellDiv.classList.remove('off');
+            cellDiv.classList.add('on');
+          } else {
+            cellDiv.classList.remove('on');
+            cellDiv.classList.add('off');
+          }
+        }
+      }
+    }
+
+    function applyMove(board, x, y) {
+      for (let col = 0; col < boardSize; col++) {
+        board[y][col] = !board[y][col];
+      }
+      for (let row = 0; row < boardSize; row++) {
+        board[row][x] = !board[row][x];
+      }
+      board[y][x] = !board[y][x];
+    }
+
+    function boardToVector(board) {
+      const vec = [];
+      for (let row = 0; row < boardSize; row++) {
+        for (let col = 0; col < boardSize; col++) {
+          vec.push(board[row][col]);
+        }
+      }
+      return vec;
+    }
+
+    // ---------------------------
+    // GF(2) Solver Functionality
+    // ---------------------------
+    function getEffectVector(x, y) {
+      const SIZE = boardSize * boardSize;
+      const effect = new Array(SIZE).fill(false);
+      for (let col = 0; col < boardSize; col++) {
+        effect[y * boardSize + col] = !effect[y * boardSize + col];
+      }
+      for (let row = 0; row < boardSize; row++) {
+        effect[row * boardSize + x] = !effect[row * boardSize + x];
+      }
+      effect[y * boardSize + x] = !effect[y * boardSize + x];
+      return effect;
+    }
+
+    function buildAugmentedMatrix(initialState) {
+      const SIZE = boardSize * boardSize;
+      let M = new Array(SIZE);
+      for (let i = 0; i < SIZE; i++) {
+        M[i] = new Array(SIZE + 1).fill(false);
+      }
+      for (let j = 0; j < SIZE; j++) {
+        const x = j % boardSize;
+        const y = Math.floor(j / boardSize);
+        const eff = getEffectVector(x, y);
+        for (let i = 0; i < SIZE; i++) {
+          if (eff[i]) {
+            M[i][j] = true;
+          }
+        }
+      }
+      for (let i = 0; i < SIZE; i++) {
+        if (!initialState[i]) {
+          M[i][SIZE] = true;
+        }
+      }
+      return M;
+    }
+
+    function gaussianElimination(M) {
+      const rows = M.length;
+      const cols = boardSize * boardSize;
+      let r = 0;
+      const pivotCol = new Array(rows).fill(-1);
+      for (let c = 0; c < cols && r < rows; c++) {
+        let pivot = -1;
+        for (let i = r; i < rows; i++) {
+          if (M[i][c]) {
+            pivot = i;
+            break;
+          }
+        }
+        if (pivot === -1) continue;
+        if (pivot !== r) {
+          let temp = M[r];
+          M[r] = M[pivot];
+          M[pivot] = temp;
+        }
+        pivotCol[r] = c;
+        for (let i = 0; i < rows; i++) {
+          if (i !== r && M[i][c]) {
+            for (let j = c; j < cols + 1; j++) {
+              M[i][j] = M[i][j] ^ M[r][j];
+            }
+          }
+        }
+        r++;
+      }
+      for (let i = r; i < rows; i++) {
+        if (M[i][cols]) {
+          return null;
+        }
+      }
+      let sol = new Array(cols).fill(false);
+      for (let i = r - 1; i >= 0; i--) {
+        let c = pivotCol[i];
+        let sum = M[i][cols];
+        for (let j = c + 1; j < cols; j++) {
+          if (M[i][j] && sol[j]) {
+            sum = !sum;
+          }
+        }
+        sol[c] = sum;
+      }
+      return sol;
+    }
+
+    function extractMoves(sol) {
+      const moves = [];
+      const SIZE = boardSize * boardSize;
+      for (let j = 0; j < sol.length; j++) {
+        if (sol[j]) {
+          const x = j % boardSize;
+          const y = Math.floor(j / boardSize);
+          moves.push({ x: x + 1, y: y + 1 });
+        }
+      }
+      return moves;
+    }
+
+    function verifySolutionVector(ordering, initialState) {
+      const state = initialState.slice();
+      for (const m of ordering) {
+        const x = m.x - 1;
+        const y = m.y - 1;
+        const eff = getEffectVector(x, y);
+        for (let i = 0; i < state.length; i++) {
+          if (eff[i]) state[i] = !state[i];
+        }
+      }
+      return state.every(v => v === true);
+    }
+
+    async function findLegalOrderingGreedy(initialState, moves, moveLimit, timeoutMs) {
+      const startTime = performance.now();
+      let attempt = 0;
+      while (performance.now() - startTime < timeoutMs) {
+        attempt++;
+        let unscheduled = moves.slice();
+        let ordering = [];
+        let state = initialState.slice();
+        let progress = true;
+        while (unscheduled.length > 0 && progress) {
+          progress = false;
+          // Shuffle unscheduled moves.
+          for (let i = unscheduled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [unscheduled[i], unscheduled[j]] = [unscheduled[j], unscheduled[i]];
+          }
+          for (let k = unscheduled.length - 1; k >= 0; k--) {
+            const m = unscheduled[k];
+            const x = m.x - 1;
+            const y = m.y - 1;
+            if (!state[y * boardSize + x]) {
+              const eff = getEffectVector(x, y);
+              for (let i = 0; i < state.length; i++) {
+                if (eff[i]) {
+                  state[i] = !state[i];
+                }
+              }
+              ordering.push(m);
+              unscheduled.splice(k, 1);
+              progress = true;
+            }
+          }
+        }
+        if (unscheduled.length === 0 && verifySolutionVector(ordering, initialState)) {
+          if (ordering.length <= moveLimit) {
+            console.log("Legal ordering found after " + attempt + " attempts.");
+            return ordering;
+          }
+        }
+        if (attempt % 100 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+      }
+      return null;
+    }
+
+    async function solveBoard() {
+      const initialStateVec = boardToVector(currentBoard);
+      const M = buildAugmentedMatrix(initialStateVec);
+      const sol = gaussianElimination(M);
+      if (sol === null) {
+        alert("No solution found via GF(2) elimination.");
+        return;
+      }
+      const movesGF2 = extractMoves(sol);
+      console.log("GF(2) solution indicates " + movesGF2.length + " moves.");
+      const moveLimit = parseInt(document.getElementById('moveLimitInput').value, 10) || Infinity;
+      const timeoutMs = parseInt(document.getElementById('timeoutInput').value, 10) || 5000;
+      const ordering = await findLegalOrderingGreedy(initialStateVec, movesGF2, moveLimit, timeoutMs);
+      if (ordering === null) {
+        alert("Failed to find a legal ordering within the move/time limit.");
+        return;
+      }
+      document.getElementById('solutionOutput').value = ordering.map(m => `(${m.x}, ${m.y})`).join(', ');
+      moveSequence = ordering;
+      currentStep = 0;
+      history = [copyBoard(currentBoard)];
+      setMessage(`Solver found legal ordering with ${ordering.length} moves.`);
+    }
+
+    // -----------------------
+    // Step-by-Step Controls
+    // -----------------------
+    function resetBoard() {
+      currentBoard = copyBoard(initialBoard);
+      currentStep = 0;
+      history = [copyBoard(currentBoard)];
+      updateGrid();
+      setMessage(`Board reset. Total moves loaded: ${moveSequence.length}.`);
+    }
+
+    function setMessage(msg) {
+      document.getElementById('message').textContent = msg;
+    }
+
+    function nextStep() {
+      if (currentStep >= moveSequence.length) {
+        setMessage("Reached the end of the move sequence. / Move sequence is not loaded.");
+        return;
+      }
+      const gridContainer = document.getElementById('gridContainer');
+      const savedScrollTop = gridContainer.scrollTop;
+      const move = moveSequence[currentStep];
+      flashTargetCell(moveSequence[currentStep].x - 1, moveSequence[currentStep].y - 1, 100);
+      applyMove(currentBoard, move.x - 1, move.y - 1);
+      currentStep++;
+      history.push(copyBoard(currentBoard));
+      updateGrid();
+      gridContainer.scrollTop = savedScrollTop;
+      setMessage(`Step ${currentStep} / ${moveSequence.length} applied: (${move.x}, ${move.y})`);
+    }
+
+    function flashTargetCell(x, y, duration = 50) {
+      // Because buildGrid() populates cells with row from (boardSize - 1) down to 0,
+      // the row index in the DOM is (boardSize - 1 - y).
+      const rowIndex = boardSize - 1 - y;
+      const colIndex = x;
+      const cellIndex = rowIndex * boardSize + colIndex;
+
+      const gridDiv = document.getElementById('grid');
+      const cells = gridDiv.children;
+      if (cellIndex < 0 || cellIndex >= cells.length) return;
+
+      // Add the 'clicked' class
+      const cellDiv = cells[cellIndex];
+      cellDiv.classList.add('clicked');
+
+      // Remove it after 'duration' milliseconds
+      setTimeout(() => {
+        cellDiv.classList.remove('clicked');
+      }, duration);
+    }
+
+    // Utility sleep function (in milliseconds)
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    let isAnimating = false;
+    let cancelAnimation = false;
+    let currentAnimationId = 0;
+
+    async function firstStep() {
+      // If an animation is already running, signal cancellation and wait for it to stop.
+      if (isAnimating) {
+        cancelAnimation = true;
+        while (isAnimating) {
+          await sleep(10);
+        }
+        // Now immediately jump to step 1.
+        if (moveSequence.length > 0) {
+          currentBoard = copyBoard(initialBoard);
+          flashTargetCell(moveSequence[0].x - 1, moveSequence[0].y - 1);
+          applyMove(currentBoard, moveSequence[0].x - 1, moveSequence[0].y - 1);
+          history = [copyBoard(currentBoard)];
+          currentStep = 1;
+          updateGrid();
+          setMessage(`Board is set to step 1: (${moveSequence[0].x}, ${moveSequence[0].y}).`);
+        }
+        cancelAnimation = false;
+        return;
+      }
+
+      // Start a new animation.
+      isAnimating = true;
+      cancelAnimation = false;
+      // Reset board.
+      currentBoard = copyBoard(initialBoard);
+      history = [copyBoard(currentBoard)];
+      updateGrid();
+
+      if (moveSequence.length >= 1) {
+        // Animate the first move.
+        applyMove(currentBoard, moveSequence[0].x - 1, moveSequence[0].y - 1);
+        history.push(copyBoard(currentBoard));
+        updateGrid();
+        currentStep = 1;
+        setMessage(`Step ${currentStep} applied: (${moveSequence[0].x}, ${moveSequence[0].y}).`);
+        await sleep(50);
+      }
+      setMessage("Board is set to step 1.");
+      isAnimating = false;
+    }
+
+    async function finalStep() {
+      // If an animation is already running, signal cancellation and wait.
+      if (isAnimating) {
+        cancelAnimation = true;
+        while (isAnimating) {
+          await sleep(10);
+        }
+        // Now immediately jump to the final state.
+        currentBoard = applyMoves(initialBoard, moveSequence);
+        currentStep = moveSequence.length;
+        history = [copyBoard(currentBoard)];
+        updateGrid();
+        setMessage(`Board is set to final step (${moveSequence.length}).`);
+        cancelAnimation = false;
+        return;
+      }
+
+      isAnimating = true;
+      cancelAnimation = false;
+      // Reset board.
+      currentBoard = copyBoard(initialBoard);
+      history = [copyBoard(currentBoard)];
+      updateGrid();
+
+      // Animate moves one by one.
+      for (let i = 0; i < moveSequence.length; i++) {
+        if (cancelAnimation) break;
+        flashTargetCell(moveSequence[i].x - 1, moveSequence[i].y - 1);
+        applyMove(currentBoard, moveSequence[i].x - 1, moveSequence[i].y - 1);
+        history.push(copyBoard(currentBoard));
+        updateGrid();
+        currentStep = i + 1;
+        setMessage(`Step ${currentStep} applied: (${moveSequence[i].x}, ${moveSequence[i].y}).`);
+        await sleep(50);
+      }
+      if (cancelAnimation) {
+        // If canceled, immediately jump to final state.
+        currentBoard = applyMoves(initialBoard, moveSequence);
+        currentStep = moveSequence.length;
+        history = [copyBoard(currentBoard)];
+        updateGrid();
+        setMessage(`Animation canceled. Board is set to final step (${moveSequence.length}).`);
+      } else {
+        setMessage(`Board is set to final step (${moveSequence.length}).`);
+      }
+      isAnimating = false;
+      cancelAnimation = false;
+    }
+
+
+    function applyMoves(initial, moves) {
+      let board = copyBoard(initial);
+      for (let i = 0; i < moves.length; i++) {
+        applyMove(board, moves[i].x - 1, moves[i].y - 1);
+      }
+      return board;
+    }
+
+    function prevStep() {
+      if (history.length === 0) {
+        setMessage("Already at the beginning.");
+        return;
+      }
+      const gridContainer = document.getElementById('gridContainer');
+      const savedScrollTop = gridContainer.scrollTop;
+      history.pop();
+      currentStep--;
+      currentBoard = copyBoard(history[history.length - 1]);
+      updateGrid();
+      gridContainer.scrollTop = savedScrollTop;
+      setMessage(`Step undone`);
+    }
+
+    // -----------------------
+    // Event Listeners
+    // -----------------------
+    document.getElementById('loadBoard').addEventListener('click', () => {
+      boardSize = parseInt(document.getElementById('boardSizeInput').value, 10);
+      if (isNaN(boardSize) || boardSize < 1) {
+        alert("Please enter a valid board size.");
+        return;
+      }
+      const board = parseBoard(document.getElementById('boardInput').value);
+      if (board) {
+        initialBoard = board;
+        currentBoard = copyBoard(initialBoard);
+        history = [copyBoard(currentBoard)];
+        buildGrid();
+        updateGrid();
+      }
+    });
+
+    window.addEventListener('load', () => {
+      boardSize = parseInt(document.getElementById('boardSizeInput').value, 10) || 24;
+      const board = parseBoard(document.getElementById('boardInput').value);
+      if (board) {
+        initialBoard = board;
+        currentBoard = copyBoard(initialBoard);
+        history = [copyBoard(currentBoard)];
+        buildGrid();
+        updateGrid();
+        // Automatically load moves from the "moveInput" textarea.
+        const text = document.getElementById('moveInput').value.trim();
+        let moves = [];
+        const parts = text.split(/\),\s*/);
+        for (let part of parts) {
+          part = part.replace(/[()\[\]]/g, '');
+          const [xStr, yStr] = part.split(',').map(s => s.trim());
+          const x = parseInt(xStr, 10);
+          const y = parseInt(yStr, 10);
+          if (!isNaN(x) && !isNaN(y)) {
+            moves.push({ x, y });
+          }
+        }
+        moveSequence = moves;
+        currentStep = 0;
+        history = [copyBoard(currentBoard)];
+        setMessage(`Loaded ${moveSequence.length} moves. Ready to step through.`);
+      }
+    });
+
+
+    document.getElementById('resetBoard').addEventListener('click', resetBoard);
+
+    document.getElementById('loadMoves').addEventListener('click', () => {
+      const text = document.getElementById('moveInput').value.trim();
+      let moves = [];
+      const parts = text.split(/\),\s*/);
+      for (let part of parts) {
+        part = part.replace(/[()\[\]]/g, '');
+        const [xStr, yStr] = part.split(',').map(s => s.trim());
+        const x = parseInt(xStr, 10);
+        const y = parseInt(yStr, 10);
+        if (!isNaN(x) && !isNaN(y)) {
+          moves.push({ x, y });
+        }
+      }
+      moveSequence = moves;
+      currentStep = 0;
+      history = [copyBoard(currentBoard)];
+      setMessage(`Loaded ${moveSequence.length} moves. Ready to step through.`);
+    });
+
+    document.getElementById('nextStep').addEventListener('click', nextStep);
+    document.getElementById('finalStep').addEventListener('click', finalStep);
+    document.getElementById('prevStep').addEventListener('click', prevStep);
+    document.getElementById('startStep').addEventListener('click', firstStep)
+    document.getElementById('solveBoard').addEventListener('click', solveBoard);
+
+    // -----------------------
+    // Initialization on Page Load
+    // -----------------------
+    window.addEventListener('load', () => {
+      boardSize = parseInt(document.getElementById('boardSizeInput').value, 10) || 24;
+      const board = parseBoard(document.getElementById('boardInput').value);
+      if (board) {
+        initialBoard = board;
+        currentBoard = copyBoard(initialBoard);
+        history = [copyBoard(currentBoard)];
+        buildGrid();
+        updateGrid();
+      }
+    });
+  </script>
+</body>
+</html>
